@@ -78,9 +78,19 @@ class cpu:
 				return BLOCKED_IO
 			dstmem.store(val)
 			srcmem.store(None)
+			return val
+		return DATA_ABORT
 			
 	def store(self, dst, src):
 		dstmem = self.resolveaddr(dst, True)
-		srcmem = self.resolveaddr(src)
+		if dstmem:
+			if src.isdigit():
+				val = int(src)
+			else:
+				srcmem = self.resolveaddr(src)
+				if srcmem:
+					val = srcmem.load()
+			return dstmem.store(val)
+		return DATA_ABORT 
 		
-			
+	def add	
