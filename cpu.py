@@ -5,7 +5,12 @@ UNDEFINED_INST = 0xF001
 BLOCKED_IO = 0xF002
 DATA_ABORT = 0xF003
 
-
+class CpuException(Exception):
+	def __init__(self,val):
+		self.value = val
+	def __str__(self):
+		return 'CPU Exception:' + self.val
+		
 
 class mem:
 	def __init__(self,val=None, blk=False):
@@ -17,13 +22,13 @@ class mem:
 			if self.val:
 				return self.val
 			else:
-				return BLOCKED_IO
+				raise CpuException(BLOCKED_IO)
 		else: 
 			return self.val
 	
 	def store(self, val):
 		if self.isblocking and self.val:
-			return BLOCKED_IO
+			raise CpuException(BLOCKED_IO)
 		else:
 			self.val = val
 		return val
@@ -37,16 +42,17 @@ class cpu:
 		
 	def resolveaddr(self, addr, indirect = False):
 		r = None
-		val = int(addr) if addr.isdigit() else int(addr[1:-1])
-		if addr.isdigit() and 0 <= val < len(self.ports):
-			r = self.ports[val]
-		elif val < len(self.regs)
-			if indirect:
+		try:
+			val = int(addr) if addr.isdigit() else int(addr[1:-1])
+			if addr.isdigit():
+				r = self.ports[val]
+			elif indirect:
 				val2 = self.regs[val].load()
-				if 0 <= val2 < len(self.ports):
-					r = self.ports[val2]
+				r = self.ports[val2]
 			else:
 				r = self.regs[val]
+		except IndexError:
+			raise CpuException(DATA_ABORT)		
 		return r
 		
 	def updateflags(self, val):
@@ -55,42 +61,39 @@ class cpu:
 		selg.LZ = (val < 0)
 		
 	def move(self, dst, src):
-		dstmem = self.resolveaddr(dst)
-		if dstmem:
-			if src.isdigit():
-				dstmem.store(int(src))
-				self.updateflags(int(src))
-				return int(src)
-			else:
-				srcmem = self.resolveaddr(src)
-				if srcmem:
-					val = srcmem.load()
-					self.updateflags(val)	
-					return val
-		return DATA_ABORT
+		val = int(src) if src.isdigit() else self.resolveaddr(src).load()
+		self.updateflags(val)
+		return self.resolveaddr(dst).store(val)
 	
 	def load(self, dst, src):
-		dstmem = self.resolveaddr(dst)
 		srcmem = self.resolveaddr(src, True)
-		if dstmem and srcmem:
-			val = srcmem.load()
-			if val == BLOCKED_IO:
-				return BLOCKED_IO
-			dstmem.store(val)
-			srcmem.store(None)
-			return val
-		return DATA_ABORT
+		val = srcmem.load()
+		self.resolveaddr(dst).store(val)
+		srcmem.store(None)
+		self.updateflags(val)
+		return val
 			
 	def store(self, dst, src):
-		dstmem = self.resolveaddr(dst, True)
-		if dstmem:
-			if src.isdigit():
-				val = int(src)
-			else:
-				srcmem = self.resolveaddr(src)
-				if srcmem:
-					val = srcmem.load()
-			return dstmem.store(val)
-		return DATA_ABORT 
+		val = int(src) if src.isdigit() else self.resolveaddr(src).load()
+		return self.resolveaddr(dst, True).store(val)
 		
-	def add	
+	def addorsub(self, dst, src, op):
+		dstmem = self.resolveaddr(dst)
+		val2 = dstmem.load()
+		val = int(src) if src.isdigit() else self.resolveaddr(src).load()			
+		if op == '-':
+			val2 -= val
+		elif op == '+':
+			val2 += val
+		else:
+			raise CpuException(UNDEFINED_INST)
+		dstmem.store(val2)
+		self.updateflags(val2)
+		return val2
+	
+		def addop(self, dst, src):
+			return self.addorsub(dst, src, '+')
+		
+		def subop(self, dst, src):
+			return self.addorsub(dst, src, '-')
+			
