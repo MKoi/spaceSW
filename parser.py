@@ -1,3 +1,4 @@
+from __future__ import print_function
 import re
 from recordtype import recordtype
 
@@ -30,19 +31,16 @@ def handleoperand(s,op,ilist,i):
 def printstatement(s):
 	if not s.error:
 		if s.label:
-			print s.label
+			print(s.label)
 		elif s.opcode:
-			print s.opcode, s.op1, s.op2
+			print(s.opcode, s.op1, s.op2)
 		else:
-			print 'comment'
+			print('comment')
 	else:
-		print s.error
+		print(s.error)
 		
 
-def parse(t):
-	print 'parse:',t
-	
-	
+def parse(t):	
 	m = re.compile('\s*((?!R[0-9]{1,3}:)[A-Z0-9]{1,8}:)?(([A-Z]{3})(\s+[A-Z0-9]+)?(\s+[A-Z0-9]+)?)?\s*$')
 	mc = re.compile('\s*#(.*)')
 	mem = re.compile('R[0-9]{1,3}')
@@ -103,6 +101,7 @@ def unittest():
 		'#'
 	]
 	for t in tst:
+		print('parse',t)
 		parse(t)
 
-#unittest()
+unittest()

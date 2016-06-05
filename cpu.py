@@ -31,14 +31,16 @@ class mem:
 			raise CpuException(BLOCKED_IO)
 		else:
 			self.val = val
-		return val
 		
 
 class cpu:
-	def __init__(self, regc, ports):
+	def __init__(self, labels, code, regc, ports):
+		self.labels = labels
+		self.code = code
 		self.regs = [mem(0,False) for i in range(regc)]
 		self.updateflags(0)
 		self.ports = ports
+		self.PC = 0
 		
 	def resolveaddr(self, addr, indirect = False):
 		r = None
@@ -54,7 +56,7 @@ class cpu:
 		except IndexError:
 			raise CpuException(DATA_ABORT)		
 		return r
-		
+	
 	def updateflags(self, val):
 		self.Z = (val == 0)
 		self.GZ = (val > 0)
@@ -63,7 +65,7 @@ class cpu:
 	def move(self, dst, src):
 		val = int(src) if src.isdigit() else self.resolveaddr(src).load()
 		self.updateflags(val)
-		return self.resolveaddr(dst).store(val)
+		self.resolveaddr(dst).store(val)
 	
 	def load(self, dst, src):
 		srcmem = self.resolveaddr(src, True)
@@ -71,11 +73,10 @@ class cpu:
 		self.resolveaddr(dst).store(val)
 		srcmem.store(None)
 		self.updateflags(val)
-		return val
 			
 	def store(self, dst, src):
 		val = int(src) if src.isdigit() else self.resolveaddr(src).load()
-		return self.resolveaddr(dst, True).store(val)
+		self.resolveaddr(dst, True).store(val)
 		
 	def addorsub(self, dst, src, op):
 		dstmem = self.resolveaddr(dst)
@@ -89,11 +90,39 @@ class cpu:
 			raise CpuException(UNDEFINED_INST)
 		dstmem.store(val2)
 		self.updateflags(val2)
-		return val2
 	
 		def addop(self, dst, src):
-			return self.addorsub(dst, src, '+')
+			self.addorsub(dst, src, '+')
 		
 		def subop(self, dst, src):
-			return self.addorsub(dst, src, '-')
+			self.addorsub(dst, src, '-')
+		
+		def compare(self, dst, src):
+			dstmem = self.resolveaddr(dst)
+			val2 = dstmem.load()
+			val = int(src) if src.isdigit() else self.resolveaddr(src).load()
+			val2 -= val
+			self.updateflags(val2)
 			
+		def jump(self, dst)
+			if dst[0] == 'R' and len(dst) > 1 and dst[1:-1].isdigit():
+				self.PC += self.resolveaddr(dst).load()
+			elif dst in self.labels:
+				self.PC = self.labels[dst]
+				
+		def jumpGZ(self, dst):
+			if self.GZ:
+				self.jump(dst)
+				
+		def jumpLZ(self, dst):
+			if self.LZ:
+				self.jump(dst)
+				
+		def jumpEQ(self, dst):
+			if self.EQ:
+				self.jump(dst)
+				
+		def jumpNE(self, dst):
+			if not self.EQ:
+				self.jump(dst):
+				
