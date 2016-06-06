@@ -104,4 +104,5 @@ def unittest():
 		print('parse',t)
 		parse(t)
 
-unittest()
+if __name__ == '__main__':
+	unittest()
