@@ -2,10 +2,11 @@ from __future__ import print_function
 import re
 from recordtype import recordtype
 
-Statement = recordtype('Statement', 'label opcode op1 op2 error', default=None)
+Statement = recordtype('Statement', [('opcode', None), ('ops', [])])
+Error = recordtype('Error', 'text span', default=None)
 statement_err = 'invalid statement: '
-op_err = 'invalid operand: '
-op_miss_err = 'missing operand!'
+op_err = 'invalid operand '
+op_miss_err = 'missing operand '
 opcode_err = 'invalid opcode: '
 unk_err = 'unspecified error'
 
@@ -14,34 +15,32 @@ unk_err = 'unspecified error'
 # ilist = instruction dict
 # i = operand num
 def handleoperand(s,op,ilist,i):
+	#print('handle op:',op)
 	m = ilist[s.opcode]
+	e = Error()
 	if m[i] == None and op == None:
 		return
 	elif m[i] == None and op:
-		s.error = op_err + op
+		e.text = op_err + str(i+1) + ':' + op
 	elif m[i] and not op:
-		s.error = op_miss_err
+		e.text = op_miss_err + str(i+1)
 	else:
-		if m[i].match(op):
-			s.op1 = op
+		opstr = op.lstrip()
+		if m[i].match(opstr):
+			s.ops.append(opstr)
+			return
 		else:
-			s.error = op_err + op
-
+			e.text = op_err + op
+	return e
 
 def printstatement(s):
-	if not s.error:
-		if s.label:
-			print(s.label)
-		elif s.opcode:
-			print(s.opcode, s.op1, s.op2)
-		else:
-			print('comment')
-	else:
-		print(s.error)
+	print(s.opcode,)
+	for op in s.ops:
+		print(op)
 		
 
 def parse(t):	
-	m = re.compile('\s*((?!R[0-9]{1,3}:)[A-Z0-9]{1,8}:)?(([A-Z]{3})(\s+[A-Z0-9]+)?(\s+[A-Z0-9]+)?)?\s*$')
+	m = re.compile('\s*((?!R[0-9]{1,3}:)[A-Z0-9]{1,8}:)?(([A-Z]+)(\s+[A-Z0-9]+)?(\s+[A-Z0-9]+)?)?\s*$')
 	mc = re.compile('\s*#(.*)')
 	mem = re.compile('R[0-9]{1,3}')
 	lbl = re.compile('(?!R[0-9]{1,3}:)[A-Z0-9]{1,8}')
@@ -62,28 +61,39 @@ def parse(t):
 		'JNE': (lbl_mem_or_lit,None),
 		'NOP': (None,None)
 	}
-	s = Statement()
+	s = None
 	r = m.match(t)
-	if r:
+	errs = []
+	label = None
+	if r:	
 		if r.group(1):
-			s.label = r.group(1)
-		if r.group(2):		
+			label = r.group(1)
+		if r.group(2):
+			s = Statement()
+			s.ops = []
 			if r.group(3):
 				if r.group(3) in ilist:
 					s.opcode = r.group(3)
-					handleoperand(s,r.group(4),ilist,0)
-					handleoperand(s,r.group(5),ilist,1)
+					e = handleoperand(s,r.group(4),ilist,0)
+					if e:
+						e.span = r.span(4)
+						errs.append(e)
+					e = handleoperand(s,r.group(5),ilist,1)
+					if e:
+						e.span = r.span(5)
+						errs.append(e)
 				else:
-					s.error = opcode_err + r.group(3)
+					errs.append(Error(opcode_err + r.group(3),r.span(3)))
 			else:
-				s_error = opcode_err + t
-		if not s.label and not s.opcode:
-			s.error = statement_err + t
+				errs.append(Error(opcode_err + t,r.span(2)))
+		if not label and not s:
+			errs.append(Error(statement_err + t,r.span(2)))
 	else:
 		r2 = mc.match(t)
 		if not r2:
-			s.error =  statement_err + t
-	printstatement(s)
+			errs.append(Error(statement_err + t))
+
+	return label,s,errs
 			
 def unittest():
 	tst = [
@@ -96,13 +106,21 @@ def unittest():
 		' MOVR',
 		'MOV R0 R1 R2',
 		'MOV R0 R1',
+		'MOV R0 FOO',
 		'SOV R0 R1',
 		'  # foo',
 		'#'
 	]
 	for t in tst:
 		print('parse',t)
-		parse(t)
+		label,s,errs = parse(t)
+		if label:
+			print(label)
+		if errs:
+			for e in errs:
+				print(e,)
+		elif s:
+			printstatement(s)
 
 if __name__ == '__main__':
 	unittest()
