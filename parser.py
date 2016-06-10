@@ -6,6 +6,7 @@ Statement = recordtype('Statement', [('opcode', None), ('ops', [])])
 Error = recordtype('Error', 'text span', default=None)
 statement_err = 'invalid statement: '
 op_err = 'invalid operand '
+op_too_many_err = 'too many operands'
 op_miss_err = 'missing operand '
 opcode_err = 'invalid opcode: '
 unk_err = 'unspecified error'
@@ -40,7 +41,7 @@ def printstatement(s):
 		
 
 def parse(t):	
-	m = re.compile('\s*((?!R[0-9]{1,3}:)[A-Z0-9]{1,8}:)?(([A-Z]+)(\s+[A-Z0-9]+)?(\s+[A-Z0-9]+)?)?\s*$')
+	m = re.compile('\s*((?!R[0-9]{1,3}:)[A-Z0-9]{1,8}:)?(([A-Z]+)(\s+[A-Z0-9]+)?(\s+[A-Z0-9]+)?(\s+.+)?)?\s*$')
 	mc = re.compile('\s*#(.*)')
 	mem = re.compile('R[0-9]{1,3}')
 	lbl = re.compile('(?!R[0-9]{1,3}:)[A-Z0-9]{1,8}')
@@ -82,6 +83,8 @@ def parse(t):
 					if e:
 						e.span = r.span(5)
 						errs.append(e)
+					if r.group(6):
+						errs.append(Error(op_too_many_err + r.group(6),r.span(6)))
 				else:
 					errs.append(Error(opcode_err + r.group(3),r.span(3)))
 			else:
