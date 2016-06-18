@@ -47,6 +47,7 @@ class Textbox(object):
 			c = self.text[i]
 			if c == '\n':
 				#print('line:',r[-1])
+				r[-1] = r[-1] + ' '
 				r.append('')
 				x = 0
 			else:
