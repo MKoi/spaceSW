@@ -14,10 +14,14 @@ class TextboxUI(Textbox):
 	def __init__(self, rows, columns, r, fs):
 		super(TextboxUI, self).__init__(rows, columns)
 		self.font = pygame.font.Font(None, fs)
-		cs = self.font.size('x')
-		w = cs[0]*(columns+2)
-		h = cs[1]*(rows+2) + self.font.get_linesize()*(rows-1) 
+		self.charsize = self.font.size('X')
+		w = self.charsize[0]*(columns+2)
+		h = self.charsize[1]*(rows+2) + self.font.get_linesize()*(rows-1) 
 		self.textgfx = pygame.Surface((w,h))
+		self.cursorgfx = pygame.Surface(self.charsize)
+		pygame.draw.rect(self.cursorgfx, WHITE, pygame.Rect(0, 0, self.charsize[0], self.charsize[1]), 0)
+		self.cpos = (0,0) 	
+
 
 	def renderText(self):
 		self.textgfx.fill(BLACK)
@@ -25,11 +29,23 @@ class TextboxUI(Textbox):
 		for l in self.lines():
 			gfx = self.font.render(l, 0, WHITE)
 			self.textgfx.blit(gfx,(0,y))
-			y += self.font.size(l)[1] #+ self.font.get_linesize()
+			y += self.charsize[1] #+ self.font.get_linesize()
 		
+	
+	def updateCursor(self):
+		cpos = self.cursor()
+		cursorY = self.charsize[1] * cpos[1]
+		cursorX = self.font.size(self.lines()[cpos[1]][:cpos[0]])[0]
+		self.cpos = (cursorX,cursorY)
+	
+	def render(self, s):
+		s.blit(self.textgfx,(0,0))
+		s.blit(self.cursorgfx, self.cpos)
+	
 	def addText(self,t):
 		super(TextboxUI, self).addText(t)
 		self.renderText()
+		self.updateCursor()
 
 
 def unittest(): 
@@ -42,7 +58,7 @@ def unittest():
 	background.fill(BLACK) 
  
 	tb = TextboxUI(10,10,(0,0),12)
-	tb.addText('MOV\nLDR R0 R1\nADD R0 R1\n')
+	tb.addText('MOV\nLDR R0 R1\nADD R0 R1\nSUB')
  
 	clock = pygame.time.Clock()
 	exitgame = False
@@ -56,7 +72,7 @@ def unittest():
 				exitgame = True 
 				break 
 		screen.blit(background, (0, 0))
-		screen.blit(tb.textgfx,(0,0))
+		tb.render(screen)
 		pygame.display.flip()
 
 		
