@@ -22,7 +22,29 @@ class TextboxUI(Textbox):
 		pygame.draw.rect(self.cursorgfx, WHITE, pygame.Rect(0, 0, self.charsize[0], self.charsize[1]), 0)
 		self.cpos = (0,0) 	
 
+	def getKeyPress(self):
+		for event in pygame.event.get():
+			if event.type == KEYDOWN:    
+				return event.key
+			else:
+				return False
+	
+	def getInput(self):  
+		keyPress = 0
+		for event in pygame.event.get(KEYDOWN):
+			keyPress = event.key
 
+		if keyPress == K_RETURN:
+			self.addText('\n')
+		elif keyPress == K_SPACE:
+			self.addText(' ')
+		elif keyPress >= 32 and keyPress <= 126:
+			#capitalise it 
+			keyPress -= 32
+			c = chr(keyPress)
+			self.addText(c)
+
+	
 	def renderText(self):
 		self.textgfx.fill(BLACK)
 		y = 0
@@ -64,14 +86,19 @@ def unittest():
 	exitgame = False
 	while not exitgame: 
 		dt = clock.tick(targetfps) 
-		for event in pygame.event.get(): 
+		elist = pygame.event.get()
+		for event in elist: 
 			if event.type == QUIT: 
 				exitgame = True 
 				break 
 			elif event.type == KEYDOWN and event.key == K_ESCAPE: 
 				exitgame = True 
-				break 
+				break
+			else:
+				pygame.event.post(event)
 		screen.blit(background, (0, 0))
+		tb.getInput()
+		pygame.event.clear()
 		tb.render(screen)
 		pygame.display.flip()
 
