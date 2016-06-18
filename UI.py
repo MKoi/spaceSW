@@ -52,10 +52,27 @@ class TextboxUI(Textbox):
 			gfx = self.font.render(l, 0, WHITE)
 			self.textgfx.blit(gfx,(0,y))
 			y += self.charsize[1] #+ self.font.get_linesize()
-		
 	
-	def updateCursor(self):
-		cpos = self.cursor()
+	def setCursor(self,x,y):
+		ly = 0
+		while y-self.charsize[1] > 0:
+			ly += 1
+			y -= self.charsize[1]
+		ll = self.lines()
+		ly = min(len(ll)-1,ly)
+		l = ll[ly]
+		m = self.font.metrics(l)
+		xx = 0
+		for i in range(len(m)):
+			xx += m[i][4]
+			if xx >= x:
+				break
+		super(TextboxUI, self).setCursor(i,ly)
+		self.updateCursor((i,ly))
+			
+	
+	def updateCursor(self, pos=None):
+		cpos = pos if pos else self.cursor()
 		cursorY = self.charsize[1] * cpos[1]
 		cursorX = self.font.size(self.lines()[cpos[1]][:cpos[0]])[0]
 		self.cpos = (cursorX,cursorY)
@@ -94,6 +111,8 @@ def unittest():
 			elif event.type == KEYDOWN and event.key == K_ESCAPE: 
 				exitgame = True 
 				break
+			elif event.type == MOUSEBUTTONDOWN:
+				tb.setCursor(event.pos[0],event.pos[1])
 			else:
 				pygame.event.post(event)
 		screen.blit(background, (0, 0))
