@@ -1,5 +1,5 @@
 #from __future__ import print_function
-import textwrap
+#import textwrap
 
 class Textbox:
 	def __init__(self, rows, columns):
@@ -7,27 +7,23 @@ class Textbox:
 		self.cols = columns
 		self.text = ''
 		self.pos = 0
-		self.wrapper = textwrap.TextWrapper(replace_whitespace=False,drop_whitespace=False,width=columns)
+		#self.wrapper = textwrap.TextWrapper(replace_whitespace=False,drop_whitespace=False,width=columns)
 		#self.lineWrap = False
 	
 	def setCursor(self, x, y):
+		#print('set cursor to ',(x,y))
 		x = min(self.cols-1,x)
 		xx = 0
 		yy = 0
 		for i in range(len(self.text)):
-			if self.text[i] == '\n':
-				yy += 1
-				xx = 0
-			elif yy == y and xx == x:
+			if yy == y and xx == x:
 				break
-			elif xx < self.cols:
-				xx += 1
-			else:
+			if xx >= self.cols - 1 or self.text[i] == '\n':
 				yy += 1
-				xx = 0
-		if i == len(self.text) - 1:
-			i += 1
-		#print('pos set to ',i,(x,y))
+				xx = 0 
+			else:
+				xx += 1
+		#print('cursor set to ',i,(xx,yy))
 		self.pos = i
 	
 	def addText(self, t):		
@@ -35,8 +31,11 @@ class Textbox:
 		self.pos += len(t)
 		
 	def deleteText(self, c):
-		a = max(0,min(len(self.text)-1,self.pos))
-		self.text = self.text[:a] + self.text[a:]
+		#print('before del:',self.text)
+		a = max(c,min(len(self.text)-1,self.pos))
+		self.text = self.text[:a-c] + self.text[a:]
+		self.pos = a-c
+		#print('after del:',self.text)
 	
 	def lines(self):
 		r = ['']
@@ -56,27 +55,18 @@ class Textbox:
 		return r
 				
 	
-	def lines2(self):
-		r = []
-		for l in self.text.splitlines():
-			s = self.wrapper.fill(l)
-			for ss in s.splitlines(): #self.wrapper.wrap(s):
-				#print('wrap:',ss)
-				r.append(ss)
-		return r
-	
 	def cursor(self):
 		x = 0
 		y = 0
 		for i in range(self.pos):
+			if x >= self.cols:
+				y += 1
+				x = 0
 			if self.text[i] == '\n':
 				y += 1
 				x = 0
-			elif x < self.cols:
-				x += 1
 			else:
-				y += 1
-				x = 1
+				x += 1
 		return (x,y)
 					
 	def printlines(self):
@@ -86,8 +76,6 @@ class Textbox:
 			print(l)
 		print('cursor:',self.cursor())
 	
-	def deleteText(self, count):
-		pass
 				
 		
 
@@ -121,6 +109,17 @@ def unittest():
 	tb3.addText('foo\n')
 	tb3.printlines()
 	
+	tb4 = Textbox(10,3)
+	tb4.addText('foo\n')
+	tb4.printlines()
+	tb4.deleteText(4)
+	tb4.printlines()
+	tb4.addText('foo\n')
+	tb4.addText('bar\n')
+	tb4.setCursor(0,1)
+	tb4.printlines()
+	tb4.deleteText(3)
+	tb4.printlines()
 
 if __name__ == '__main__':
 	unittest()
