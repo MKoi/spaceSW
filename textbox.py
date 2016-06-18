@@ -1,7 +1,7 @@
 #from __future__ import print_function
 #import textwrap
 
-class Textbox:
+class Textbox(object):
 	def __init__(self, rows, columns):
 		self.rows = rows
 		self.cols = columns
