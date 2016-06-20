@@ -26,6 +26,18 @@ class Textbox(object):
 		#print('cursor set to ',i,(xx,yy))
 		self.pos = i
 	
+	def getText(self, a, b):
+		minp = a if (a[1] < b[1] or (a[1] == b[1] and a[0] < b[0])) else b
+		maxp = a if minp == b else b
+		p = self.pos
+		self.setCursor(minp[0],minp[1])
+		i = self.pos
+		self.setCursor(maxp[0],maxp[1])
+		j = self.pos + 1 if self.pos < len(self.text) else self.pos
+		t = self.text[i:j]
+		self.pos = p
+		return t
+	
 	def addText(self, t):		
 		self.text = self.text[:self.pos] + t + self.text[self.pos:]
 		self.pos += len(t)
@@ -121,6 +133,14 @@ def unittest():
 	tb4.printlines()
 	tb4.deleteText(3)
 	tb4.printlines()
+	
+	tb5 = Textbox(10,10)
+	tb5.addText('MOV R0 R1\n')
+	tb5.addText('SUB R2 R3\n')
+	t1 = tb5.getText((0,0),(2,0))
+	tb5.addText('ADD R4 R5\n')
+	tb5.printlines()
+	print('copied text:',t1)
 
 if __name__ == '__main__':
 	unittest()
