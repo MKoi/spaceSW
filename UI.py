@@ -38,7 +38,10 @@ class TextboxUI(Textbox):
 			self.addText('\n')
 		elif keyPress == K_SPACE:
 			self.addText(' ')
-		
+		elif keyPress == K_BACKSPACE:
+			self.deleteText(1)
+			self.renderText()
+			self.updateCursor()
 		elif keyPress >= 32 and keyPress <= 126:
 			#capitalise it
 			if 96 < keyPress < 123:
