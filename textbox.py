@@ -15,8 +15,11 @@ class Textbox(object):
 		x = min(self.cols-1,x)
 		xx = 0
 		yy = 0
+		match = False
+		i = 0
 		for i in range(len(self.text)):
 			if yy == y and xx == x:
+				match = True
 				break
 			if xx >= self.cols - 1 or self.text[i] == '\n':
 				yy += 1
@@ -24,16 +27,20 @@ class Textbox(object):
 			else:
 				xx += 1
 		#print('cursor set to ',i,(xx,yy))
+		if not match:
+			#print('i:',i,'len:',len(self.text))
+			i += 1
 		self.pos = i
 	
 	def getText(self, a, b):
-		minp = a if (a[1] < b[1] or (a[1] == b[1] and a[0] < b[0])) else b
-		maxp = a if minp == b else b
+		minp = a if ((a[1] < b[1] or (a[1] == b[1] and a[0] < b[0]))) else b
+		maxp = a if (minp == b) else b
 		p = self.pos
 		self.setCursor(minp[0],minp[1])
 		i = self.pos
 		self.setCursor(maxp[0],maxp[1])
 		j = self.pos + 1 if self.pos < len(self.text) else self.pos
+		#print('minp:',minp,'maxp:',maxp,'i:',i,'j:',j)
 		t = self.text[i:j]
 		self.pos = p
 		return t
@@ -44,9 +51,10 @@ class Textbox(object):
 		
 	def deleteText(self, c):
 		#print('before del:',self.text)
+		c = min(c, self.pos)
 		a = max(c,min(len(self.text)-1,self.pos))
-		self.text = self.text[:a-c] + self.text[a:]
-		self.pos = a-c
+		self.text = self.text[:self.pos-c] + self.text[self.pos:]
+		self.pos -= c
 		#print('after del:',self.text)
 	
 	def lines(self):
@@ -65,13 +73,16 @@ class Textbox(object):
 			else:
 				r[-1] = r[-1] + c
 				x += 1
+		r[-1] = r[-1] + ' '
 		return r
 				
 	
 	def cursor(self):
 		x = 0
 		y = 0
-		for i in range(self.pos):
+		#print('cursor:',self.pos,len(self.text))
+		pos = min(self.pos,len(self.text))
+		for i in range(pos):
 			if x >= self.cols:
 				y += 1
 				x = 0

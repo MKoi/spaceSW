@@ -20,7 +20,9 @@ class TextboxUI(Textbox):
 		self.textgfx = pygame.Surface((w,h))
 		self.cursorgfx = pygame.Surface(self.charsize)
 		pygame.draw.rect(self.cursorgfx, WHITE, pygame.Rect(0, 0, self.charsize[0], self.charsize[1]), 0)
-		self.cpos = (0,0) 	
+		self.cpos = (0,0)
+		self.mousebdown = None
+		self.clipBoard = None
 
 	def getKeyPress(self):
 		for event in pygame.event.get():
@@ -28,6 +30,21 @@ class TextboxUI(Textbox):
 				return event.key
 			else:
 				return False
+	
+	def getPointerInput(self):
+		for e in pygame.event.get((MOUSEBUTTONDOWN,MOUSEBUTTONUP,MOUSEMOTION)):
+			if e.type == MOUSEBUTTONDOWN:
+				self.mousebdown = e
+			elif e.type == MOUSEBUTTONUP and self.mousebdown:
+				p1 = self.pos2cursorPos(self.mousebdown.pos[0],self.mousebdown.pos[1])
+				p2 = self.pos2cursorPos(e.pos[0],e.pos[1])
+				if p1 == p2:
+					self.setCursor(p2[0],p2[1])
+					self.updateCursor(p2)
+				else:
+					#print('copy:',p1,p2)
+					self.clipBoard = super(TextboxUI, self).getText(p1,p2)
+					#print('copied:',self.clipBoard,self.pos)
 	
 	def getInput(self):  
 		keyPress = 0
@@ -58,7 +75,12 @@ class TextboxUI(Textbox):
 			self.textgfx.blit(gfx,(0,y))
 			y += self.charsize[1] #+ self.font.get_linesize()
 	
-	def setCursor(self,x,y):
+	def setCursorScreen(self,x,y):
+		cpos = self.pos2cursorPos(x,y)
+		self.setCursor(cpos[0],cpos[1])
+		self.updateCursor(cpos)
+	
+	def pos2cursorPos(self,x,y):
 		ly = 0
 		while y-self.charsize[1] > 0:
 			ly += 1
@@ -68,13 +90,12 @@ class TextboxUI(Textbox):
 		l = ll[ly]
 		m = self.font.metrics(l)
 		xx = 0
+		i = 0
 		for i in range(len(m)):
 			xx += m[i][4]
 			if xx >= x:
 				break
-		super(TextboxUI, self).setCursor(i,ly)
-		self.updateCursor((i,ly))
-			
+		return (i,ly)
 	
 	def updateCursor(self, pos=None):
 		cpos = pos if pos else self.cursor()
@@ -104,6 +125,7 @@ def unittest():
 	tb = TextboxUI(10,10,(0,0),12)
 	tb.addText('MOV\nLDR R0 R1\nADD R0 R1\nSUB')
  
+	pygame.key.set_repeat(500,250)
 	clock = pygame.time.Clock()
 	exitgame = False
 	while not exitgame: 
@@ -116,11 +138,10 @@ def unittest():
 			elif event.type == KEYDOWN and event.key == K_ESCAPE: 
 				exitgame = True 
 				break
-			elif event.type == MOUSEBUTTONDOWN:
-				tb.setCursor(event.pos[0],event.pos[1])
 			else:
 				pygame.event.post(event)
 		screen.blit(background, (0, 0))
+		tb.getPointerInput()
 		tb.getInput()
 		pygame.event.clear()
 		tb.render(screen)
