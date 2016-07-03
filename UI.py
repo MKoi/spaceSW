@@ -15,9 +15,9 @@ class TextboxUI(Textbox):
 		super(TextboxUI, self).__init__(rows, columns)
 		self.font = pygame.font.Font(None, fs)
 		self.charsize = self.font.size('X')
-		w = self.charsize[0]*(columns+2)
-		h = self.charsize[1]*(rows+2) + self.font.get_linesize()*(rows-1) 
-		self.textgfx = pygame.Surface((w,h))
+		self.w = self.charsize[0]*(columns+2)
+		self.h = self.charsize[1]*(rows+2) + self.font.get_linesize()*(rows-1) 
+		self.textgfx = pygame.Surface((self.w,self.h))
 		self.cursorgfx = pygame.Surface(self.charsize)
 		pygame.draw.rect(self.cursorgfx, WHITE, pygame.Rect(0, 0, self.charsize[0], self.charsize[1]), 0)
 		self.cpos = (0,0)
@@ -104,8 +104,11 @@ class TextboxUI(Textbox):
 		self.cpos = (cursorX,cursorY)
 	
 	def render(self, s):
-		s.blit(self.textgfx,(0,0))
-		s.blit(self.cursorgfx, self.cpos)
+		borderw = 1
+		pygame.draw.rect(s, WHITE, Rect(0,0,self.w+2*borderw, self.h+2*borderw), borderw)
+		s.blit(self.textgfx,(borderw,borderw))
+		cpos = (self.cpos[0] + borderw, self.cpos[1] + borderw)
+		s.blit(self.cursorgfx, cpos)
 	
 	def addText(self,t):
 		super(TextboxUI, self).addText(t)
