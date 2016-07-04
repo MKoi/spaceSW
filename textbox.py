@@ -3,34 +3,26 @@
 
 class Textbox(object):
 	def __init__(self, rows, columns):
+		self.chars = [['' for x in range(columns)] for y in range(rows)] 
 		self.rows = rows
 		self.cols = columns
 		self.text = ''
-		self.pos = 0
-		#self.wrapper = textwrap.TextWrapper(replace_whitespace=False,drop_whitespace=False,width=columns)
-		#self.lineWrap = False
+		self.pos = (0,0)
+
+	def linelen(self, y):
+		x = 0
+		for c in self.chars[y]:
+			if c == '\n' or c == '':
+				break
+			x += 1
+		return x
+			
 	
 	def setCursor(self, x, y):
-		#print('set cursor to ',(x,y))
-		x = min(self.cols-1,x)
-		xx = 0
-		yy = 0
-		match = False
-		i = 0
-		for i in range(len(self.text)):
-			if yy == y and xx == x:
-				match = True
-				break
-			if xx >= self.cols - 1 or self.text[i] == '\n':
-				yy += 1
-				xx = 0 
-			else:
-				xx += 1
-		#print('cursor set to ',i,(xx,yy))
-		if not match:
-			#print('i:',i,'len:',len(self.text))
-			i += 1
-		self.pos = i
+		y = self.rows - 1 if y >= self.rows else y
+		len = self.linelen(y)
+		x = len if x > len else x
+		self.pos = (x,y)
 	
 	def getText(self, a, b):
 		minp = a if ((a[1] < b[1] or (a[1] == b[1] and a[0] < b[0]))) else b
