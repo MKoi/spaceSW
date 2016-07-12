@@ -1,96 +1,203 @@
 #from __future__ import print_function
 #import textwrap
+def biggerThan(a,b):
+	return a[1] > b[1] or (a[1] == b[1] and a[0] > b[0]) 
 
 class Textbox(object):
 	def __init__(self, rows, columns):
-		self.chars = [['' for x in range(columns)] for y in range(rows)] 
+		self.chars = [['' for x in range(columns)] for y in range(rows)]
+		self.bak = [['' for x in range(columns)] for y in range(rows)]
 		self.rows = rows
 		self.cols = columns
-		self.text = ''
+		#self.text = ''
 		self.pos = (0,0)
-
+		self.lastchar = None
+		self.debug = False
+	
+	def dprint(self,*args):
+		if self.debug:
+			print(args)
+	
+	def endofline(self, x, y):
+		if x >= self.cols:
+			return True
+		return self.chars[y][x] == '\n' or self.chars[y][x] == ''
+	
+	def save(self):
+		for i in range(self.cols):
+			for j in range(self.rows):
+				self.bak[j][i] = self.chars[j][i]
+	
+	def restore(self):
+		for i in range(self.cols):
+			for j in range(self.rows):
+				self.chars[j][i] = self.bak[j][i]
+				
 	def linelen(self, y):
 		x = 0
-		for c in self.chars[y]:
-			if c == '\n' or c == '':
-				break
+		while not self.endofline(x,y):
 			x += 1
 		return x
-			
+	
+	def maxIndex(self, y):
+		return min(self.linelen(y),self.cols-1)
+		
+	
+	def prevPos(self, p):
+		x,y = p
+		if x == 0:
+			if y == 0:
+				return None
+			else:
+				y -= 1
+				x = self.maxIndex(y)
+		else:
+			x -= 1
+		return (x,y)
+	
+	def nextPos(self, p):
+		if not p:
+			return (0,0)
+		x,y = p
+		if self.chars[y][x] == '\n':
+			return (0,y+1)
+		x = (x+1) % self.cols
+		if x == 0:
+			return (x,y+1)
+		return (x,y)
+	
+	def limits(self, x, y):
+		if biggerThan((x,y),self.lastchar):
+			return self.lastchar
+		x = min(x,self.maxIndex(y))
+		return (x,y)
 	
 	def setCursor(self, x, y):
-		y = self.rows - 1 if y >= self.rows else y
-		len = self.linelen(y)
-		x = len if x > len else x
+		if not self.lastchar:
+			self.pos = (0,0)
+			return self.pos
+		if y > self.lastchar[1]:
+			self.pos = self.nextPos(self.lastchar)
+			return self.pos
+		maxi = self.maxIndex(y)
+		if x > maxi:
+			if y == self.lastchar[1]:
+				x,y = self.nextPos(self.lastchar)
+			else:
+				x = maxi
 		self.pos = (x,y)
+		return self.pos
 	
 	def getText(self, a, b):
+		self.dprint('getText',a,b)
 		minp = a if ((a[1] < b[1] or (a[1] == b[1] and a[0] < b[0]))) else b
 		maxp = a if (minp == b) else b
-		p = self.pos
-		self.setCursor(minp[0],minp[1])
-		i = self.pos
-		self.setCursor(maxp[0],maxp[1])
-		j = self.pos + 1 if self.pos < len(self.text) else self.pos
-		#print('minp:',minp,'maxp:',maxp,'i:',i,'j:',j)
-		t = self.text[i:j]
-		self.pos = p
+		#print('maxp,minp:',maxp,minp)
+		savp = self.pos
+		minp = self.limits(minp[0],minp[1])
+		#print('maxp,minp:',maxp,minp)
+		maxp = self.limits(maxp[0],maxp[1])
+		t = ''
+		p = minp
+		#print('maxp,minp:',maxp,minp)
+		while p != maxp:
+			#print('t:',t,'p:',p)
+			t += self.chars[p[1]][p[0]]
+			p = self.nextPos(p)
+		t += self.chars[p[1]][p[0]]
+		self.pos = savp
+		self.dprint('getText return:',t)
 		return t
 	
-	def addText(self, t):		
-		self.text = self.text[:self.pos] + t + self.text[self.pos:]
-		self.pos += len(t)
+	def appendText(self, t, updatePos=True):
+		self.dprint('appendText:',t,self.pos)
+		if not t:
+			return
+		p = self.pos
+		for c in t:
+			prevp = p
+			self.chars[p[1]][p[0]] = c
+			p = self.nextPos(p)
+		self.lastchar = prevp
+		if updatePos:
+			self.pos = p
+	
+	def getEnd(self):
+		if self.nextPos(self.lastchar) == self.pos:
+			return ''
+		return self.getText(self.pos,self.lastchar)
+	
+	def insertText(self, t):
+		self.dprint('insertText:',t,self.pos)
+		if not t:
+			return
+		tmpt = self.getEnd()
+		p = self.pos
+		for c in t:
+			prevp = p
+			self.chars[p[1]][p[0]] = c
+			p = self.nextPos(p)
+		self.lastchar = prevp
+		self.pos = p
+		self.appendText(tmpt, False)	
+	
+	def addText(self, t):
+		self.save()
+		try:
+			if self.nextPos(self.lastchar) == self.pos:
+				self.appendText(t)
+			else:
+				self.insertText(t)
+			return True
+		except IndexError:
+			self.restore()
+			return False
 		
 	def deleteText(self, c):
-		#print('before del:',self.text)
-		c = min(c, self.pos)
-		a = max(c,min(len(self.text)-1,self.pos))
-		self.text = self.text[:self.pos-c] + self.text[self.pos:]
-		self.pos -= c
-		#print('after del:',self.text)
+		self.dprint('deleteText:',c,self.pos)
+		if not c:
+			return
+		tmpt = self.getEnd()
+		while self.pos and c:
+			self.pos = self.prevPos(self.pos)
+			c -= 1
+		if not self.pos:
+			self.pos = (0,0)
+			self.lastchar = None
+		else:
+			self.lastchar = self.prevPos(self.pos)
+		self.appendText(tmpt, False)
 	
 	def lines(self):
-		r = ['']
-		x = 0
-		for i in range(len(self.text)):
-			if x >= self.cols:
+		r = []
+		p = (0,0)
+		last = self.nextPos(self.lastchar)
+		while p != last:
+			c = self.chars[p[1]][p[0]]
+			if p[0] == 0:
 				r.append('')
-				x = 0
-			c = self.text[i]
 			if c == '\n':
-				#print('line:',r[-1])
-				r[-1] = r[-1] + ' '
-				r.append('')
-				x = 0
-			else:
-				r[-1] = r[-1] + c
-				x += 1
+				c = ' '
+			r[-1] = r[-1] + c
+			p = self.nextPos(p)
+		if p[0] == 0:
+			r.append('')
 		r[-1] = r[-1] + ' '
 		return r
 				
 	
 	def cursor(self):
-		x = 0
-		y = 0
-		#print('cursor:',self.pos,len(self.text))
-		pos = min(self.pos,len(self.text))
-		for i in range(pos):
-			if x >= self.cols:
-				y += 1
-				x = 0
-			if self.text[i] == '\n':
-				y += 1
-				x = 0
-			else:
-				x += 1
-		return (x,y)
+		return self.pos
 					
 	def printlines(self):
-		print('text:',self.text)
+		print('PRINT LINES START')
+		print('chars:',self.chars)
 		print('lines:')
 		for l in self.lines():
 			print(l)
 		print('cursor:',self.cursor())
+		print('last char:',self.lastchar)
+		print('PRINT LINES END')
 	
 				
 		
@@ -126,6 +233,7 @@ def unittest():
 	tb3.printlines()
 	
 	tb4 = Textbox(10,3)
+	tb4.debug = True
 	tb4.addText('foo\n')
 	tb4.printlines()
 	tb4.deleteText(4)
@@ -135,6 +243,15 @@ def unittest():
 	tb4.setCursor(0,1)
 	tb4.printlines()
 	tb4.deleteText(3)
+	tb4.printlines()
+	tb4.addText('foo')
+	tb4.printlines()
+	tb4.deleteText(1)
+	tb4.printlines()
+	tb4.deleteText(1)
+	tb4.printlines()
+	tb4.deleteText(1)
+	tb4.printlines()
 	tb4.printlines()
 	
 	tb5 = Textbox(10,10)

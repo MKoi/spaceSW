@@ -13,10 +13,11 @@ class TextboxUI(Textbox):
 	# fs = fontsize
 	def __init__(self, rows, columns, r, fs):
 		super(TextboxUI, self).__init__(rows, columns)
+		self.borderw = 1
 		self.font = pygame.font.Font(None, fs)
 		self.charsize = self.font.size('X')
-		self.w = self.charsize[0]*(columns+2)
-		self.h = self.charsize[1]*(rows+2) + self.font.get_linesize()*(rows-1) 
+		self.w = self.charsize[0]*(columns+2) + 2*self.borderw
+		self.h = self.charsize[1]*(rows+2) + self.font.get_linesize()*(rows-1) +  2*self.borderw
 		self.textgfx = pygame.Surface((self.w,self.h))
 		self.cursorgfx = pygame.Surface(self.charsize)
 		pygame.draw.rect(self.cursorgfx, WHITE, pygame.Rect(0, 0, self.charsize[0], self.charsize[1]), 0)
@@ -69,10 +70,11 @@ class TextboxUI(Textbox):
 	
 	def renderText(self):
 		self.textgfx.fill(BLACK)
-		y = 0
+		pygame.draw.rect(self.textgfx, WHITE, Rect(0,0,self.w, self.h), self.borderw)
+		y = self.borderw
 		for l in self.lines():
 			gfx = self.font.render(l, 0, WHITE)
-			self.textgfx.blit(gfx,(0,y))
+			self.textgfx.blit(gfx,(self.borderw,y))
 			y += self.charsize[1] #+ self.font.get_linesize()
 	
 	def setCursorScreen(self,x,y):
@@ -99,15 +101,17 @@ class TextboxUI(Textbox):
 	
 	def updateCursor(self, pos=None):
 		cpos = pos if pos else self.cursor()
-		cursorY = self.charsize[1] * cpos[1]
-		cursorX = self.font.size(self.lines()[cpos[1]][:cpos[0]])[0]
+		cx,cy = cpos
+		print('cpos:',cpos)
+		print(self.lines())
+		cursorY = self.charsize[1] * cy
+		ll = self.lines()
+		cursorX = self.font.size(ll[cy][:cx])[0] if cy < len(ll) else 0
 		self.cpos = (cursorX,cursorY)
 	
 	def render(self, s):
-		borderw = 1
-		pygame.draw.rect(s, WHITE, Rect(0,0,self.w+2*borderw, self.h+2*borderw), borderw)
-		s.blit(self.textgfx,(borderw,borderw))
-		cpos = (self.cpos[0] + borderw, self.cpos[1] + borderw)
+		s.blit(self.textgfx,(0,0))
+		cpos = (self.cpos[0] + self.borderw, self.cpos[1] + self.borderw)
 		s.blit(self.cursorgfx, cpos)
 	
 	def addText(self,t):
@@ -126,7 +130,7 @@ def unittest():
 	background.fill(BLACK) 
  
 	tb = TextboxUI(10,10,(0,0),12)
-	tb.addText('MOV\nLDR R0 R1\nADD R0 R1\nSUB')
+	tb.addText('MOV\nLDR R0 R1\nADD R2 R3\nSUB')
  
 	pygame.key.set_repeat(500,250)
 	clock = pygame.time.Clock()
